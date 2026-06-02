@@ -21,22 +21,25 @@ const SocialMediaAIAgent = () => {
   const callGemini = async (prompt) => {
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 500 }
+            contents: [{ parts: [{ text: prompt }] }]
           })
         }
       );
 
       const data = await response.json();
-      return data.candidates[0].content.parts[0].text;
+      
+      if (!response.ok) {
+        return `Error: ${data.error?.message || 'API request failed'}`;
+      }
+
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response received';
     } catch (error) {
-      console.error('API Error:', error);
-      return 'Error generating content. Please try again!';
+      return `Error: ${error.message}`;
     }
   };
 
@@ -52,22 +55,22 @@ const SocialMediaAIAgent = () => {
         output = `🎯 Content Ideas for ${niche}:\n\n${output}`;
       } 
       else if (type === 'trend' && industry) {
-        prompt = `What are the top 5 trending topics in ${industry} right now? For each, explain how brands can use it. Include hashtags and strategy. Research based on current 2024 trends.`;
+        prompt = `What are the top 5 trending topics in ${industry} right now? For each, explain how brands can use it. Include hashtags and strategy.`;
         output = await callGemini(prompt);
         output = `🔥 Trending in ${industry}:\n\n${output}`;
       } 
       else if (type === 'post' && contentType && tone) {
-        prompt = `Write a ${tone} social media post about ${contentType}. Make it viral-worthy, engaging, and include relevant emojis and hashtags. The tone should be ${tone}. Keep it under 300 characters but make it compelling.`;
+        prompt = `Write a ${tone} social media post about ${contentType}. Make it viral-worthy, engaging, and include relevant emojis and hashtags. Keep it under 300 characters but make it compelling.`;
         output = await callGemini(prompt);
-        output = `✨ Generated Post (${contentType} - ${tone} tone):\n\n${output}\n\nEngagement Score: 8.5/10\nBest time to post: 7-9 PM`;
+        output = `✨ Generated Post (${contentType} - ${tone} tone):\n\n${output}\n\nEngagement Score: 8.5/10`;
       } 
       else if (type === 'keyword' && topic && platform) {
-        prompt = `Generate SEO keywords and trending hashtags for "${topic}" on ${platform}. Include:\n1. Top 5 keywords\n2. Top 10 hashtags\n3. 2 caption ideas\nResearch what's actually trending for this topic.`;
+        prompt = `Generate SEO keywords and trending hashtags for "${topic}" on ${platform}. Include: 1. Top 5 keywords 2. Top 10 hashtags 3. 2 caption ideas`;
         output = await callGemini(prompt);
         output = `🏷️ Keywords for "${topic}" on ${platform}:\n\n${output}`;
       } 
       else if (type === 'influencer' && category && range) {
-        prompt = `Find verified ${category} influencers in the ${range} follower range. List 5 with:\n- Handle\n- Follower count\n- Engagement rate\n- Best content type\nMake it realistic based on actual ${category} influencer ecosystem.`;
+        prompt = `Find verified ${category} influencers in the ${range} follower range. List 5 with their handle, follower count, engagement rate, and best content type.`;
         output = await callGemini(prompt);
         output = `👥 ${category} Influencers (${range}):\n\n${output}`;
       } 
@@ -77,7 +80,8 @@ const SocialMediaAIAgent = () => {
 
       setResult(output);
     } catch (error) {
-      setResult('❌ Error: Unable to generate content. Check your API key!');
+      console.error('Generate Error:', error);
+      setResult('❌ Error: Unable to generate content. Check console!');
     }
     
     setLoading(false);
@@ -88,7 +92,7 @@ const SocialMediaAIAgent = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-black text-white p-6">
         <div className="max-w-4xl mx-auto text-center py-20">
           <h1 className="text-6xl font-bold mb-6">Social Media AI Agent</h1>
-          <p className="text-xl text-gray-300 mb-8">🚀 Powered by Real AI Research! Generate content based on actual trends and data.</p>
+          <p className="text-xl text-gray-300 mb-8">🚀 Powered by Real AI! Generate content based on actual data.</p>
           <button onClick={() => setPage('dashboard')} className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-lg">
             Start Now
           </button>
@@ -123,7 +127,7 @@ const SocialMediaAIAgent = () => {
             <input value={niche} onChange={(e) => setNiche(e.target.value)} placeholder="Enter niche" className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white" />
             <label className="block text-sm text-gray-300">Target audience?</label>
             <input value={audience} onChange={(e) => setAudience(e.target.value)} placeholder="e.g., 18-35 professionals" className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white" />
-            <button onClick={() => generate('idea')} disabled={loading} className="w-full p-3 bg-purple-600 rounded-lg font-bold hover:bg-purple-700 disabled:opacity-50">{loading ? '⏳ Researching...' : '🚀 Generate Ideas'}</button>
+            <button onClick={() => generate('idea')} disabled={loading} className="w-full p-3 bg-purple-600 rounded-lg font-bold hover:bg-purple-700 disabled:opacity-50">{loading ? '⏳ Generating...' : '🚀 Generate Ideas'}</button>
             {result && <div className="p-4 bg-white/10 rounded-lg border border-white/20"><pre className="text-gray-300 whitespace-pre-wrap text-sm">{result}</pre></div>}
           </div>
         )}
@@ -154,7 +158,7 @@ const SocialMediaAIAgent = () => {
             <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g., Digital Marketing, AI, Fitness" className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white" />
             <label className="block text-sm text-gray-300">Platform?</label>
             <input value={platform} onChange={(e) => setPlatform(e.target.value)} placeholder="e.g., Instagram, TikTok, LinkedIn" className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white" />
-            <button onClick={() => generate('keyword')} disabled={loading} className="w-full p-3 bg-green-600 rounded-lg font-bold hover:bg-green-700 disabled:opacity-50">{loading ? '⏳ Researching...' : '🔎 Generate Keywords'}</button>
+            <button onClick={() => generate('keyword')} disabled={loading} className="w-full p-3 bg-green-600 rounded-lg font-bold hover:bg-green-700 disabled:opacity-50">{loading ? '⏳ Finding...' : '🔎 Generate Keywords'}</button>
             {result && <div className="p-4 bg-white/10 rounded-lg border border-white/20"><pre className="text-gray-300 whitespace-pre-wrap text-sm">{result}</pre></div>}
           </div>
         )}
@@ -164,7 +168,7 @@ const SocialMediaAIAgent = () => {
             <label className="block text-sm text-gray-300">Category?</label>
             <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g., Tech, Fashion, Fitness" className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white" />
             <label className="block text-sm text-gray-300">Follower range?</label>
-            <input value={range} onChange={(e) => setRange(e.target.value)} placeholder="e.g., Nano (1K-10K), Micro (10K-100K), Macro" className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white" />
+            <input value={range} onChange={(e) => setRange(e.target.value)} placeholder="e.g., Nano, Micro, Macro" className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white" />
             <button onClick={() => generate('influencer')} disabled={loading} className="w-full p-3 bg-cyan-600 rounded-lg font-bold hover:bg-cyan-700 disabled:opacity-50">{loading ? '⏳ Finding...' : '👤 Find Influencers'}</button>
             {result && <div className="p-4 bg-white/10 rounded-lg border border-white/20"><pre className="text-gray-300 whitespace-pre-wrap text-sm">{result}</pre></div>}
           </div>
